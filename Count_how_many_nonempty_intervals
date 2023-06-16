@@ -1,0 +1,12 @@
+#before running...One Textgrid is selected. intereseted in tier 2.
+#manually setting total numbers of interval
+totalInt = 191
+
+count = 0
+for i to totalInt
+	label$ = Get label of interval: 2, i
+	if label$ <> ""
+	count = count + 1
+        endif
+endfor
+exitScript: count
