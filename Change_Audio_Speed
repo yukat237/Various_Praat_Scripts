@@ -1,0 +1,58 @@
+###--- changing the audio speed---###
+
+##prereq
+#- assuming original sounds are in 1 folder under the main experiment folder
+#- have DurationTier files in the main folder (1 level higher than the original sound folder) 
+
+form adjustments
+	comment folder for the original sounds? 
+	sentence stimSd C:/Users/yzt5262/Downloads/bdetect-master/bdetect-master/tstim
+	comment folder for the original sounds? s
+	sentence savepath C:/Users/yzt5262/Downloads/bdetect-master/bdetect-master/x1.3
+	choice speed_change_level 2
+		button 1.2
+		button 1.3
+		button 1.4
+endform
+
+#audio file name list
+sdListID = Create Strings as file list: "Sd filename list", stimSd$ + "/*.wav"
+fileNumSd = Get number of strings
+
+#get duration tier
+masterfol$ = stimSd$ - "/tstim"
+if speed_change_level == 1.2
+	durtier = Read from file: masterfol$ + "/x1_2tier.DurationTier" 
+elif speed_change_level == 1.3
+	durtier = Read from file: masterfol$ + "/x1_3tier.DurationTier" 
+else
+	durtier = Read from file: masterfol$ + "/x1_4tier.DurationTier" 
+endif
+
+
+for i to fileNumSd
+
+	#read sd file
+	selectObject: sdListID
+	sdName$ = Get string: i
+	basename$ = sdName$ - ".wav"
+	sdID = Read from file: stimSd$ + "/" + sdName$
+
+	selectObject: sdID
+	manipID = To Manipulation: 0.01, 75, 600
+	plusObject: durtier
+	Replace duration tier
+	selectObject: manipID
+	saveID = Get resynthesis (LPC)
+
+	#save the wav
+	Save as WAV file: savepath$ +  "/" + basename$ + ".wav"
+
+	#cleaning
+	selectObject: manipID
+	plusObject: sdID
+	plusObject: saveID
+	Remove
+
+endfor
+
