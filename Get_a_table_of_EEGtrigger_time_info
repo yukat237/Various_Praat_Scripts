@@ -1,0 +1,67 @@
+## Get a table of trigger time information ##
+
+## Prereq #######################################
+# - your textgrid file has 2 tiers: 
+#         - tier 1 is a word segment
+#         - tier 2 is a trigger segmentation(1st: word onset, 2nd: 2nd syllable onset, 3rd: word offset)
+#################################################
+
+form Filepath
+	comment path of textgrid file (make sure it is not including quotation marks when you copied the path)
+	text tg
+	comment speaker ID? (e.g., s1)
+	word speaker
+	comment accent? (e.g., American, Chinese)
+	word accent
+endform
+
+tgID = Read from file: tg$
+
+outputID = Create Table with column names... OutputTable 0 word onset second offset speaker accent
+
+selectObject: tgID
+nInt = Get number of intervals: 1
+for i to nInt
+	selectObject: tgID
+	word$ = Get label of interval: 1, i
+	if word$ <> ""
+		onset = Get start time of interval: 1, i
+		offset = Get end time of interval: 1, i
+		firstIntN = Get interval at time: 2, onset
+		second = Get end time of interval: 2, firstIntN 
+
+		#appendinfo
+		selectObject: outputID
+		Append row
+		tblrow = Get number of rows
+		Set string value: tblrow, "word", word$
+		Set numeric value: tblrow, "onset", onset
+		Set numeric value: tblrow, "second", second
+		Set numeric value: tblrow, "offset", offset
+		Set string value:  tblrow, "speaker", speaker$
+		Set string value: tblrow, "accent", accent$
+	endif
+endfor
+
+exitScript: "success!"
+
+
+
+
+#=========initial attempt===========
+nInt = Get number of interval: 2
+for i to nInt
+	currT2Label$ = Get label of interval: 2, i
+	if currT2Label$ = 1
+		onset = Get start time of interval: 2, i
+		second = Get end time of interval: 2, i
+		wordintN = Get interval at time: 1, second
+		word$ = Get label of interval: 1, wordintN
+	elsif currT2Label$ = 2
+		offset = Get end time of interval: 2, i
+	endif
+
+	#appendinfo
+
+endfor
+#==================================
