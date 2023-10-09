@@ -1,0 +1,47 @@
+#####################
+
+#get total duration from the sounds stored in 1 folder and make a table (where column1 =  filename, column2 = duration)
+
+#####################
+
+
+#-------------------------------------------------------------------------
+
+form Directory
+	comment folder for the sounds? (assuming organized by pair folder)
+	sentence soundDir 
+
+endform
+
+#for windows
+soundDir$ = replace$(soundDir$,"\","/",0)
+
+
+#-------------------------------------------------------------------------
+
+
+tableID = Create Table with column names... infoTable 0 filename duration
+
+sdListID = Create Strings as file list: "sound list", soundDir$ + "/*.wav"
+sdNum = Get number of strings
+
+for k to sdNum
+
+	selectObject: sdListID
+	filename$ = Get string: k
+	targetSdId = Read from file: soundDir$ + "/" + filename$
+	dur = Get total duration
+
+
+	selectObject: tableID 
+		Append row
+		tblrow = Get number of rows
+		Set string value: tblrow, "filename", filename$
+		Set numeric value: tblrow, "duration", dur
+		
+	#Cleaning
+		selectObject: targetSdId
+		Remove
+
+endfor
+
