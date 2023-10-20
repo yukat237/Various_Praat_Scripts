@@ -1,0 +1,17 @@
+#converting to ".TextGrid"
+
+dir$ = "C:\Users\yzt5262\OneDrive - The Pennsylvania State University\Desktop\Eric's study (SWF)\yuk_ac_analysis\pair8"
+tglist = Create Strings as file list: "tg list", dir$ + "/*.TextGrid"
+num = Get number of strings
+
+for k to num
+	
+	selectObject: tglist
+	filename$ = Get string: k
+	targetTG = Read from file: dir$ + "/" + filename$
+
+	basename$ = filename$ - ".label.TextGrid"
+
+	Save as text file: dir$ + "/" + basename$ + ".TextGrid"
+
+endfor
