@@ -1,10 +1,10 @@
 ###-------What this script does-------### 
 #1)reads pairs of WAV and TextGrid files one by one
 #2)Adds a third tier named "targSegments"
-#3)Opens the Praat Editor, Zooms into its "target word" based on the designated tab-deliminated file (named "allSentences.txt"; column name "word")
-#4)Lets the coder adjust the intervals (the item number they are on is also available on the pop up window)
+#3)Opens the Praat Editor, Zooms into its "target word" based on the designated tab-delimited file (named "allSentences.txt"; column name "word")
+#4)Lets the coder adjust the intervals (the item number they are on is also available on the pop-up window, in case they want to leave in the middle. This number can be used in the form when they resume.)
 #5)Once the coder presses Continue, it saves the TextGrid and opens the next item
-#6)Shows "ALL DONE" after going though all the WAV files available in the desginated folder
+#6)Shows "ALL DONE" after going through all the WAV files available in the designated folder
 
 #Yuka wrote on 3/3/2024
 
