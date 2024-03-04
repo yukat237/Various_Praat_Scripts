@@ -1,0 +1,115 @@
+###-------What this script does-------### 
+#1)reads pairs of WAV and TextGrid files one by one
+#2)Adds a third tier named "targSegments"
+#3)Opens the Praat Editor, Zooms into its "target word" based on the designated tab-deliminated file (named "allSentences.txt"; column name "word")
+#4)Lets the coder adjust the intervals (the item number they are on is also available on the pop up window)
+#5)Once the coder presses Continue, it saves the TextGrid and opens the next item
+#6)Shows "ALL DONE" after going though all the WAV files available in the desginated folder
+
+#Yuka wrote on 3/3/2024
+
+#------FORM-----------
+
+form Set Directories
+	comment The folder directory of your Sound files (no / at the end)
+	sentence sdDir C:/Users/yuka/Downloads/Re_ Praat!
+	comment The folder directory of your TextGrid files
+	sentence tgDir C:/Users/yuka/Downloads/Re_ Praat!
+	comment The folder directory of your tab-delim file
+	sentence infoDir C:/Users/yuka/Downloads/Re_ Praat!
+	comment    
+	comment The folder directory of your output TextGrid files
+	sentence outDir C:/Users/yuka/Downloads/Re_ Praat!
+	comment
+	comment if you are resuming this task, which number did you stop at? (leave as 1 if this is the first time to run)
+	positive fromNum 1
+endform
+
+#-------PREP-----------
+
+#audio file name list
+sdListID = Create Strings as file list: "Sd filename list", sdDir$ + "/*.wav"
+fileNumSd = Get number of strings
+
+#read in tab-delim file for word info
+infoListID = Read from file: infoDir$ + "/allSentences.txt"
+
+
+#------MAIN LOOP-------
+for k from fromNum to fileNumSd
+	#get sd
+	selectObject: sdListID
+	sdName$ = Get string: k
+	basename$ = sdName$ - ".wav"
+	sdID = Read from file: sdDir$ + "/" + sdName$
+	#get Tg of the current Sd file
+	tgID = Read from file: tgDir$ + "/" + basename$ + ".TextGrid"
+
+	#get the word to zoom in
+		#get the sentID from the filename
+		baselength = length (basename$)
+		cutlength = baselength - 4
+		tempStr$  = right$ (basename$, cutlength)
+		currlength = length (tempStr$)
+		cutlength2 = currlength - 2
+		sentID$ =  left$ (tempStr$, cutlength2)
+
+		#find the row number of sentID is at in the chart
+		selectObject: infoListID
+		whichRow$ = Search column: "sentence ID", sentID$
+		whichRow$ =  left$ (whichRow$, 3)
+		whichRow = number (whichRow$)
+		
+		#find the target word
+		targetWord$ = Get value: whichRow, "word"
+		spaceWhere = index(targetWord$, " ")
+		if spaceWhere <> 0
+			toHere = spaceWhere - 1
+			targetWord$ = left$(targetWord$, toHere)
+		endif
+
+	#find where the word is in TG to get its Start and End time
+		#loop each interval to see which interval has the target word
+		selectObject: tgID
+		numIntervals = Get number of intervals: 1
+		for n to numIntervals
+			currLabel$ = Get label of interval: 1, n
+			if currLabel$ = targetWord$
+				timeS = Get start time of interval: 1, n
+				timeE = Get end time of interval: 1, n
+				zoomS = timeS - 0.2
+				zoomE = timeE + 0.2
+			else
+				timeS = 0
+				timeE = Get total duration
+				zoomS = timeS
+				zoomE = timeE
+			endif
+		endfor
+
+	#create a new tier at the bottom of the TG
+	Insert interval tier: 3, "targSegments"
+	
+	#message prep
+	k$ = string$ (k)
+
+	#grab the sound and open them in the editor
+	plusObject: sdID
+	View & Edit
+	editor: tgID
+	Select: timeS, timeE
+	Zoom: zoomS, zoomE
+	
+	pauseScript: "You are currently on item " + k$ + ". Edit intervals, then click Continue"
+
+	#save this Tg
+	Close
+	selectObject: tgID
+	Write to text file: outDir$ + "/" + basename$ + ".TextGrid"
+
+	#clean up
+	removeObject: sdID, tgID
+
+endfor
+
+exitScript: "ALL DONE!"
