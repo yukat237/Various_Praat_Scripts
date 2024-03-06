@@ -1,0 +1,186 @@
+
+##----what this does----##
+#Treats only one set of WAV and TG file set, with one run
+#the output numeric values (formant & duration values) will contain "999" if it is not applicable (i.e., no interval)
+#the output string values (interval labels) will contain "NA" if it is not applicable (i.e., no interval for tier 7)
+#Once done, table would be saved as a csv file.
+##----------------------##
+
+
+#----form-------
+
+form Filepath
+	comment path of the sound file (make sure it is not including quotation marks when you copied the path)
+	text sdDir C:\Users\yuka\Desktop\for Rose\P01_Translation1 2.wav
+	comment path of the textgrid file (make sure it is not including quotation marks when you copied the path)
+	text tgDir C:\Users\yuka\Desktop\for Rose\P01_Translation1 1.TextGrid
+	comment path of the output file (make sure it is not including quotation marks when you copied the path)
+	text outPath C:\Users\yuka\Desktop\for Rose\P01_Translation1 1.csv
+
+    	choice speaker_gender: 1
+	button Female
+	button Male
+endform
+
+
+#----output prep-----
+
+outputID = Create Table with column names: "outputTable",0, "tier1_Label tier2_Label tier3_Label tier4_f1 tier4_f2 tier4_f3 tier4_dur tier5_f1 tier5_f2 tier5_f3 tier5_dur tier7_label"
+
+
+#----Main Loop-------
+
+sdID = Read from file: sdDir$
+tgID = Read from file: tgDir$
+
+numInt = Get number of intervals: 1
+
+for k to numInt
+	selectObject: tgID
+	t1Label$ = Get label of interval: 1, k
+	if t1Label$ <> ""
+		t1onset = Get start time of interval: 1, k
+		t1offset = Get end time of interval: 1, k
+		t2Label$ = Get label of interval: 2, k
+
+		#extract the part for both sounds and TG...
+		#BUT if there are multiple labels for the same phrase, we want to delete the ones currently not needed
+		#count how many same labels exist
+		selectObject: tgID
+		ctThislabel = Count intervals where: 1, "is equal to", t1Label$
+		#process the extraction by condition...
+		if ctThislabel <> 1
+
+			selectObject: tgID
+			plusObject: sdID
+			Extract intervals where: 1, "yes", "is equal to", t1Label$
+
+			currID = selected(1)
+			for i to ctThislabel
+				selectObject: currID
+				currTimeS = Get start time
+				if currTimeS = t1onset
+					thisID = currID
+				else
+					Remove
+				endif
+				currID = currID + 1
+			endfor
+			
+			extSdID = thisID
+
+		else
+			selectObject: tgID
+			plusObject: sdID
+			extSdID = Extract intervals where: 1, "yes", "is equal to", t1Label$
+		endif
+
+		selectObject: tgID
+		extTgID = Extract part: t1onset, t1offset, "yes"	
+
+		#check tier3
+		t3IntCt = Get number of intervals: 3
+		if t3IntCt = 3
+			t3Label$ = Get label of interval: 3, 2
+		else
+			t3Label$ = "NA"
+		endif
+
+		#make formant obj based on the speaker gender, for the following processes
+		selectObject: extSdID
+		if speaker_gender$ == "Female"
+			formantID = To Formant (burg): 0, 5, 5500, 0.025, 50
+		else
+   			formantID = To Formant (burg): 0, 5, 5000, 0.025, 50
+  		endif
+
+		#check tier4
+		selectObject: extTgID
+		t4IntCt = Get number of intervals: 4
+		if t4IntCt = 3
+			#get interval info
+			t4timeS = Get start time of interval: 4, 2
+			t4timeE = Get end time of interval: 4, 2
+
+			#Find the midpoint
+			t4dur = t4timeE - t4timeS
+			t4mid = t4timeS + (t4dur/2)
+
+			#get acoustic measures
+			selectObject: formantID
+			t4F1 = Get value at time: 1, t4mid, "hertz", "linear"
+			t4F2 = Get value at time: 2, t4mid, "hertz", "linear"
+			t4F3 = Get value at time: 3, t4mid, "hertz", "linear"
+
+		else
+			t4F1 = 999
+			t4F2 = 999
+			t4F3 = 999
+			t4Dur = 999
+		endif
+
+
+		#check tier5
+		selectObject: extTgID
+		t5IntCt = Get number of intervals: 5
+		if t5IntCt = 3
+			#get interval info
+			t5timeS = Get start time of interval: 5, 2
+			t5timeE = Get end time of interval: 5, 2
+
+			#Find the midpoint
+			t5dur = t5timeE - t5timeS
+			t5mid = t5timeS + (t5dur/2)
+
+			#get acoustic measures
+			selectObject: formantID
+			t5F1 = Get value at time: 1, t5mid, "hertz", "linear"
+			t5F2 = Get value at time: 2, t5mid, "hertz", "linear"
+			t5F3 = Get value at time: 3, t5mid, "hertz", "linear"
+
+		else
+			t5F1 = 999
+			t5F2 = 999
+			t5F3 = 999
+			t5Dur = 999
+		endif
+
+
+		#check tier7
+		selectObject: extTgID
+		t7Label$ = Get label of interval: 7, 1
+
+		if t7Label$ = ""
+			t7Label$ = "NA"
+		endif
+
+
+		#appendinfo
+		selectObject: outputID
+		Append row
+		tblrow = Get number of rows
+		Set string value: tblrow, "tier1_Label", t1Label$
+		Set string value: tblrow, "tier2_Label", t2Label$
+		Set string value: tblrow, "tier3_Label", t3Label$
+		Set numeric value: tblrow, "tier4_f1", t4F1
+		Set numeric value: tblrow, "tier4_f2", t4F2
+		Set numeric value: tblrow, "tier4_f3", t4F3
+		Set numeric value: tblrow, "tier4_dur", t4Dur
+		Set numeric value: tblrow, "tier5_f1", t5F1
+		Set numeric value: tblrow, "tier5_f2", t5F2
+		Set numeric value: tblrow, "tier5_f3", t5F3
+		Set numeric value: tblrow, "tier5_dur", t5Dur
+		Set string value: tblrow, "tier7_label", t7Label$
+
+		#cleaning
+		removeObject: extSdID, extTgID, formantID
+
+	endif
+
+endfor
+
+selectObject: outputID
+Save as comma-separated file: outPath$
+
+exitScript: "All Done!"
+
