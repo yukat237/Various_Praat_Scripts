@@ -1,0 +1,172 @@
+#########################################
+###script for Matt-- for corpus work!#### (scripted by Yuka)
+#########################################
+
+#-Notes & Pre reqs
+#- combined Textgrid file, with a new point tier at the bottom (script part 1 should do this)
+#- separate txt files for info (I made these; might need adjustment for spelling format to ensure the word matches)
+#- assuming Sound and Textgrid files have the exactly same name
+
+#-Notes for coders
+#- it might take several seconds until the next item pops up. Please be patient for this!:)
+
+
+#-----FORM--------
+
+form Set Directories
+	comment The folder directory of your sound files (no / at the end)
+	sentence sdDir C:/Users/yuka/Desktop/Matt_corpus_work
+	comment The folder directory of your TextGrid files
+	sentence tgDir C:/Users/yuka/Desktop/Matt_corpus_work
+	comment The folder directory of your tab-delim file
+	sentence infoDir C:/Users/yuka/Desktop/Matt_corpus_work
+	comment
+	comment The folder directory of your output TextGrid files & information table
+	sentence outDir C:/Users/yuka/Desktop/Matt_corpus_work/testoutput
+	comment
+	comment which category do you want to code?
+	choice category 1
+	button VsC
+	button VsV VtV VdV
+	button Vsj
+	button VVsv/tv/dv
+	button VVsC
+endform
+
+#-----PREP---------
+#audio file name list
+sdListID = Create Strings as file list: "Sd filename list", sdDir$ + "/*.wav"
+fileNumSd = Get number of strings
+
+
+#read in tab-delim file for word info, based on the chosen category, to make a target word list
+if category = 1
+	targetListID = Read Strings from raw text file: infoDir$ + "/VsC.txt"
+elif category = 2
+	targetListID = Read Strings from raw text file: infoDir$ + "/VsVVtVVdV.txt"
+elif category = 3
+	targetListID = Read Strings from raw text file: infoDir$ + "/Vsj.txt"
+elif category = 4
+	targetListID = Read Strings from raw text file: infoDir$ + "/VVsvtvdv.txt"
+elif category = 5
+	targetListID = Read Strings from raw text file: infoDir$ + "/VVsC.txt"
+endif
+alltargetNum = Get number of strings
+
+
+#information table
+tableID = Create Table with column names... infoTable 0 utterance_Interval_num utterance_label original_file_name utterance_onset targetWord_label targetWord_onset
+
+
+#----MAIN----------
+
+#Loop1: Sound loop
+for k to fileNumSd
+	#get sound
+	selectObject: sdListID
+	sdName$ = Get string: k
+	basename$ = sdName$ - ".wav"
+	sdID = Read from file: sdDir$ + "/" + sdName$
+	#get the merged Textgrid of this sound
+	tgID = Read from file: tgDir$ + "/" + basename$ + ".TextGrid"
+
+	#get how many intervals for the tier 1 & 2
+	selectObject: tgID
+	numIntervalsSENTENCE = Get number of intervals: 1	
+	numIntervalsWORD = Get number of intervals: 2	
+
+	#Loop2: sentence(utterance) loop
+	for x to numIntervalsSENTENCE
+		selectObject: tgID
+		targetSent$ = Get label of interval: 1, x
+
+		#Condition1: Look at each sentence, 1)if empty, do nothing. 2) if NOT empty,
+#			     search tier 2 and if matches any word, extract and open the editor
+		if targetSent$ <> ""
+			#extract this part
+			sentTimeS = Get start time of interval: 1, x
+			sentTimeE = Get end time of interval: 1, x
+			selectObject: sdID
+			currSentID = Extract part: sentTimeS, sentTimeE, "rectangular", 1, "yes"
+			selectObject: tgID
+			currSentTGID = Extract part: sentTimeS, sentTimeE, "yes"  
+			numIntervalsWORDextracted = Get number of intervals: 2
+
+			#Loop3: look at word tier from left to right
+			for y to numIntervalsWORDextracted
+				selectObject: currSentTGID
+				currWord$ = Get label of interval: 2, y
+				#condition2: if word tier of this sent is not empty
+				if currWord$ <> ""				
+					#Loop4: explore target word list
+					for z to alltargetNum
+						selectObject: targetListID
+						wordTocheck$ = Get string: z
+						#condition3: if the current interval word label is matching any of the target words
+						if currWord$ = wordTocheck$
+							#get the interval time info to zoom in
+							selectObject: currSentTGID
+							timeS = Get start time of interval: 2, y
+							timeE = Get end time of interval: 2, y
+							zoomS = timeS - 0.2
+							zoomE = timeE + 0.2
+
+							#open the editor for manul adjustment
+							selectObject: currSentTGID 
+							plusObject: currSentID
+							
+							View & Edit
+							editor: currSentTGID
+							Select: timeS, timeE
+							Zoom: zoomS, zoomE
+		
+							pauseScript: "Edit intervals, then click Continue"
+
+							#save this Sd
+							Close
+							selectObject: currSentID
+							x$ = string$ (x)
+							nowarn Save as WAV file: outDir$ + "/" + basename$ + "_" + "utteranceIntervalNum" + x$ + "_" + currWord$ + ".wav"
+
+							#save this Tg
+							selectObject: currSentTGID
+							Shift times to: "start time", 0
+							Write to text file: outDir$ + "/" + basename$ + "_" + "utteranceIntervalNum" + x$ + "_" + currWord$ + ".TextGrid"
+
+	
+							selectObject: tableID
+							Append row
+							tblrow = Get number of rows
+							Set numeric value: tblrow, "utterance_Interval_num", x
+							Set string value: tblrow, "utterance_label", targetSent$
+							Set string value: tblrow, "original_file_name", sdName$
+							Set numeric value: tblrow, "utterance_onset", sentTimeS
+							Set string value: tblrow, "targetWord_label", currWord$
+							Set numeric value: tblrow, "targetWord_onset", timeS
+
+
+						#condition3
+						endif
+
+					#Loop4
+					endfor
+
+				 #condition2
+				endif
+
+			#Loop3
+			endfor
+
+			#Cleaning
+			removeObject: currSentID, currSentTGID							
+
+		#Condition1
+		endif
+		
+	#loop2
+	endfor
+
+#loop1
+endfor
+
+exitScript: "DONE!"
